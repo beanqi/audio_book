@@ -12,6 +12,7 @@ class EpubParser:
         self.epub_path = epub_path
         self.book = None
         self.toc = None
+        self.chapter_counter = 0  # 添加章节计数器
         self.setup_logging()
 
     def setup_logging(self):
@@ -81,6 +82,7 @@ class EpubParser:
             split_level: 文件切分层级
         """
         os.makedirs(output_dir, exist_ok=True)
+        self.chapter_counter = 0  # 重置计数器
 
         def process_section(sections, current_level=1, parent_titles=None):
             if parent_titles is None:
@@ -93,17 +95,16 @@ class EpubParser:
 
                     # 当前层级等于指定切分层级时，保存文件
                     if current_level == split_level:
-                        # 收集当前章节及其所有子章节的内容
+                        self.chapter_counter += 1  # 增加计数器
                         content = self.collect_chapter_content(section)
-                        # 使用完整路径作为文件名
                         full_title = "_".join(current_titles)
                         self.save_chapter(output_dir, full_title, content, current_titles)
-                    # 当前层级小于指定切分层级时，继续向下处理
                     elif current_level < split_level and children:
                         process_section(children, current_level + 1, current_titles)
                 else:
                     # 处理单独的章节（没有子章节的情况）
                     if current_level == split_level:
+                        self.chapter_counter += 1  # 增加计数器
                         current_titles = parent_titles + [section.title]
                         content = self.get_chapter_content(section)
                         full_title = "_".join(current_titles)
@@ -113,8 +114,9 @@ class EpubParser:
 
     def save_chapter(self, output_dir: str, filename: str, content: str, chapter_titles: List[str]):
         try:
-            # 清理文件名
+            # 清理文件名并添加序号
             filename = self.sanitize_filename(filename)
+            filename = f"{self.chapter_counter:03d}_{filename}"  # 添加3位数的序号前缀
             filepath = os.path.join(output_dir, f"{filename}.txt")
 
             # 处理重名文件
