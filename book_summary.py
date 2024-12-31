@@ -29,7 +29,8 @@ class BookChapterPodcastGenerator:
         
         示例格式：
         第X章：XXX
-        正文内容...
+        一两句话概括本章内容。
+        正文内容……
         """
 
         try:
@@ -109,7 +110,7 @@ def main():
     api_key = "5YX3tAaOILHUWM0pSMOMWJ23L5xIC9DPHY"
     generator = BookChapterPodcastGenerator(api_key)
     chapters = []
-    input_dir = "the_war_blow_lithium"
+    input_dir = "inflation_or_deflation"
     for filename in os.listdir(input_dir):
         if filename.endswith(".txt"):
             chapter_title = os.path.splitext(filename)[0]
@@ -117,7 +118,7 @@ def main():
                 chapter_text = file.read()
                 chapters.append({
                     "text": chapter_text,
-                    "book_title": "锂战争",
+                    "book_title": "通胀，还是通缩：全球经济迷思",
                     "chapter_title": chapter_title
                 })
     results = generator.batch_process_chapters(chapters, max_workers=15)
