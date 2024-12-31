@@ -7,7 +7,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 class BookChapterPodcastGenerator:
     def __init__(self, api_key: str = "xxxaaa"):
-        self.client = OpenAI(api_key=api_key, base_url="https://gpt.3665739.xyz/v1")  # 新的初始化方式
+        self.client = OpenAI(api_key=api_key, base_url="https://api.deepinfra.com/v1/openai")  # 新的初始化方式
 
     def generate_podcast_script(self, 
                               chapter_text: str, 
@@ -22,35 +22,51 @@ class BookChapterPodcastGenerator:
         4. 使用简洁、流畅的语言，保证可读性与可听性。
         5. 不得生成与原文无关的内容或任何解释性文段。
         6. 输出仅包含播客稿件正文，无需额外说明或提示。
+        7. 以中文撰写稿件，字数不少于3000字。
 
         原文内容：
         {chapter_text}
+        
+        示例格式：
+        第X章：XXX
+        正文内容...
         """
 
         try:
-            # 新的API调用方式
-            response = self.client.chat.completions.create(
-                model="gpt-4",
+            # 使用流式输出
+            stream = self.client.chat.completions.create(
+                model="Qwen/Qwen2.5-72B-Instruct",
                 messages=[
                     {"role": "system", "content": "你是一个专业的读书助手，善于将书籍内容转化为生动的播客。"},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.7,
-                max_tokens=30000
+                max_tokens=30000,
+                timeout=2000,
+                stream=True  # 启用流式输出
             )
-            # 新的响应获取方式
-            podcast_script = response.choices[0].message.content
+            
+            # 收集流式响应
+            podcast_script = ""
+            for chunk in stream:
+                if chunk.choices[0].delta.content is not None:
+                    podcast_script += chunk.choices[0].delta.content
+                    # 可选：实时打印输出
+                    print(chunk.choices[0].delta.content, end='', flush=True)
+
             result = {
                 "book_title": book_title,
                 "chapter_title": chapter_title,
                 "podcast_script": podcast_script,
                 "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             }
+            
             if output_file:
                 with open(output_file, 'w', encoding='utf-8') as f:
                     f.write(podcast_script)
-                print(f"播客脚本已保存到: {output_file}")
+                print(f"\n播客脚本已保存到: {output_file}")
             return result
+
         except Exception as e:
             print(f"生成播客脚本时发生错误: {str(e)}")
             return None
@@ -90,10 +106,10 @@ class BookChapterPodcastGenerator:
         return results
 
 def main():
-    api_key = "your-api-key-here"
+    api_key = "5YX3tAaOILHUWM0pSMOMWJ23L5xIC9DPHY"
     generator = BookChapterPodcastGenerator(api_key)
     chapters = []
-    input_dir = "zhangwuchang"
+    input_dir = "the_war_blow_lithium"
     for filename in os.listdir(input_dir):
         if filename.endswith(".txt"):
             chapter_title = os.path.splitext(filename)[0]
@@ -101,10 +117,10 @@ def main():
                 chapter_text = file.read()
                 chapters.append({
                     "text": chapter_text,
-                    "book_title": "五常经济学",
+                    "book_title": "锂战争",
                     "chapter_title": chapter_title
                 })
-    results = generator.batch_process_chapters(chapters, max_workers=5)
+    results = generator.batch_process_chapters(chapters, max_workers=15)
 
 if __name__ == "__main__":
     main()
